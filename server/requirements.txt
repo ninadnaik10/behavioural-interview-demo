@@ -1,0 +1,12 @@
+Flask
+Flask-Cors
+pymongo
+numpy
+librosa
+torch
+transformers
+tensorflow
+assemblyai
+language-tool-python
+scikit-learn
+python-dotenv
