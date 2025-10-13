@@ -8,6 +8,7 @@ import assemblyai as aai
 import language_tool_python
 from pymongo import MongoClient
 import gridfs
+from google import genai
 
 class MLService:
     def __init__(self, app):
@@ -49,6 +50,29 @@ class MLService:
         
         avg_prediction = round(sum(prediction_sequence) / len(prediction_sequence), 2) if prediction_sequence else 0
         return prediction_sequence, avg_prediction
+
+    def query_llm(self, question, answer, avg_prediction, speech_rate_wpm):
+        prompt = f"""
+        You are an assistant to a hiring manager who is conducting a behavioral interview. You are given a question, an answer, an average confidence prediction (range 1-5 where 1 is not confident and 5 is very confident), and a speech rate in words per minute.
+        You need to analyze the question, relevancy of the answer to the question, other parameters provided to you.
+        You need to provide helpful feedback to the hiring manager who is tasked to make the decision to hire the candidate.
+        The feedback should be critical, short, and to the point.
+        The feedback should be in the bullet points and can be 2-4 points.
+        The feedback will only contain bullet points and no other text like headings or paragraphs or conclusions.
+        Do not mention the question, answer, average prediction, or speech rate in the feedback. Just write your insights in the feedback.
+        The feedback should not contain tips or suggestions for the candidate.
+        The question is: {question}
+        The answer is: {answer}
+        The average prediction is: {avg_prediction}
+        The speech rate is: {speech_rate_wpm}
+        """
+
+        client = genai.Client()
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash", contents=prompt
+        )
+        return response.text
 
 
 class TranscriptionService:

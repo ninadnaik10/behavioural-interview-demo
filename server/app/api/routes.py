@@ -17,13 +17,16 @@ def predict():
     uploaded_file = request.files['audio']
     filename = uploaded_file.filename.lower()
 
+    question = request.form.get('question', "N/A")
+    answer = request.form.get('answer', "N/A")
+
     if not (filename.endswith('.wav') or filename.endswith('.webm')):
         return jsonify({"error": "Unsupported file type. Only .wav or .webm allowed"}), 400
 
-    return asyncio.run(predict_async(uploaded_file, filename))
+    return asyncio.run(predict_async(uploaded_file, filename, question, answer))
 
 
-async def predict_async(uploaded_file, filename):
+async def predict_async(uploaded_file, filename, question, answer):
     temp_audio_path = None
     executor = ThreadPoolExecutor()
     
@@ -47,16 +50,17 @@ async def predict_async(uploaded_file, filename):
             ),
             asyncio.get_event_loop().run_in_executor(
                 executor, run_transcription, audio_content, current_app.transcription_service
-            )
+            ),
+            
         ]
         
         results = await asyncio.gather(*tasks)
         prediction_sequence, avg_prediction = results[0]
         transcript, num_of_words, duration, speech_rate_wpm = results[1]
-        
-        issues = await asyncio.get_event_loop().run_in_executor(
-            executor, current_app.grammar_service.check_grammar, transcript
+        feedback = await asyncio.get_event_loop().run_in_executor(
+            executor, run_llm_prediction, question, answer, avg_prediction, speech_rate_wpm, current_app.ml_service
         )
+
         
         metadata = {
             **request.form,
@@ -65,7 +69,7 @@ async def predict_async(uploaded_file, filename):
             "transcript": transcript,
             "numofwords": num_of_words,
             "speech_rate_wpm": speech_rate_wpm,
-            "issues": issues
+            "feedback": feedback
         }
         
         await asyncio.get_event_loop().run_in_executor(
@@ -100,6 +104,10 @@ def run_ml_prediction(audio_content, ml_service):
     import io
     audio_file = io.BytesIO(audio_content)
     return ml_service.predict_from_audio_file(audio_file)
+
+
+def run_llm_prediction(question, answer, avg_prediction, speech_rate_wpm, ml_service):
+    return ml_service.query_llm(question, answer, avg_prediction, speech_rate_wpm)
 
 
 def run_transcription(audio_content, transcription_service):

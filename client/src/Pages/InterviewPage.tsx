@@ -1,11 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Camera, Mic, Square, Send, CheckCircle } from "lucide-react";
+import { Button } from "../components/ui/button";
 import {
-  Camera,
-  Mic,
-  Square,
-  Send,
-  CheckCircle,
-} from "lucide-react";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Badge } from "../components/ui/badge";
+import { Alert, AlertDescription } from "../components/ui/alert";
 
 // Type definitions
 interface RecordedAnswer {
@@ -22,14 +27,16 @@ const BehavioralInterview: React.FC = () => {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordedAnswers, setRecordedAnswers] = useState<RecordedAnswer[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+    null
+  );
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
   const [permissionGranted, setPermissionGranted] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [recordedMimeType, setRecordedMimeType] = useState<string>("");
   const [interviewId, setInterviewId] = useState<string>("");
   const [name, setName] = useState<string>("");
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -37,10 +44,8 @@ const BehavioralInterview: React.FC = () => {
 
   // Sample behavioral questions
   const questions: string[] = [
-    "Tell me about a time when you had to work under pressure. How did you handle it?",
     "Describe a situation where you had to work with a difficult team member. What was your approach?",
     "Give an example of a goal you set and how you achieved it.",
-    "Tell me about a time you made a mistake. How did you handle it?",
     "Describe a situation where you showed leadership skills.",
   ];
 
@@ -72,7 +77,7 @@ const BehavioralInterview: React.FC = () => {
       setPermissionGranted(true);
 
       // Setup audio visualization
-      const AudioContextClass = 
+      const AudioContextClass =
         window.AudioContext || (window as any).webkitAudioContext;
       const audioContext = new AudioContextClass();
       const analyser = audioContext.createAnalyser();
@@ -105,7 +110,8 @@ const BehavioralInterview: React.FC = () => {
       requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
-      ctx.fillStyle = "rgb(15, 23, 42)";
+      // ctx.fillStyle = "hsl(var(--background))";
+      ctx.fillStyle = "rgb(2, 6, 23)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const barWidth = (canvas.width / bufferLength) * 2.5;
@@ -115,16 +121,7 @@ const BehavioralInterview: React.FC = () => {
       for (let i = 0; i < bufferLength; i++) {
         barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
 
-        const gradient = ctx.createLinearGradient(
-          0,
-          canvas.height - barHeight,
-          0,
-          canvas.height
-        );
-        gradient.addColorStop(0, "#3b82f6");
-        gradient.addColorStop(1, "#1d4ed8");
-
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = "hsl(141, 71%, 48%)";
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
 
         x += barWidth + 1;
@@ -244,75 +241,86 @@ const BehavioralInterview: React.FC = () => {
   return (
     <>
       {stage === "welcome" && (
-        <div className="min-h-screen min-w-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-6">
-          <div className="max-w-2xl w-full bg-white rounded-2xl shadow-2xl p-8">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Camera className="w-10 h-10 text-blue-600" />
+        <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+          <Card className="max-w-2xl w-full">
+            <CardHeader className="text-center space-y-4">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <Camera className="w-10 h-10 text-primary" />
               </div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Behavioral Interview
-              </h1>
-              <p className="text-lg text-gray-600 mb-8">
-                Welcome! This interview consists of {questions.length} behavioral
-                questions. You'll record your answers using your camera and
-                microphone.
-              </p>
+              <CardTitle className="text-4xl">Behavioral Interview</CardTitle>
+              <CardDescription className="text-lg">
+                Welcome! This interview consists of {questions.length}{" "}
+                behavioral questions. You'll record your answers using your
+                camera and microphone.
+              </CardDescription>
+            </CardHeader>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 text-left">
-                <h3 className="font-semibold text-gray-900 mb-3">
-                  Before you begin:
-                </h3>
-                <ul className="space-y-2 text-gray-700">
-                  <li className="flex items-start">
-                    <span className="text-blue-600 mr-2">•</span>
-                    <span>Ensure you're in a quiet, well-lit environment</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-blue-600 mr-2">•</span>
-                    <span>
-                      Grant camera and microphone permissions when prompted
-                    </span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-blue-600 mr-2">•</span>
-                    <span>Take your time to think before answering</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-blue-600 mr-2">•</span>
-                    <span>Speak clearly and provide specific examples</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="mb-4 flex flex-col gap-4">
-                <input
+            <CardContent className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Before you begin:</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <span className="text-primary mr-2">•</span>
+                      <span>
+                        Ensure you're in a quiet, well-lit environment
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-primary mr-2">•</span>
+                      <span>
+                        Grant camera and microphone permissions when prompted
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-primary mr-2">•</span>
+                      <span>Take your time to think before answering</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-primary mr-2">•</span>
+                      <span>Speak clearly and provide specific examples</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-4">
+                <Input
                   type="text"
                   placeholder="Enter your Name"
                   value={name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                  className="w-full p-2 rounded-lg border border-gray-300"
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setName(e.target.value)
+                  }
                 />
 
-                <button
+                <Button
                   onClick={() => setStage("setup")}
-                  className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow-lg"
+                  className="w-full"
+                  size="lg"
+                  disabled={!name.trim()}
                 >
                   Start Interview
-                </button>
+                </Button>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
-      {stage === "setup" && (
-        <div className="min-h-screen min-w-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-6">
-          <div className="max-w-4xl w-full bg-white rounded-2xl shadow-2xl p-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-              Camera & Audio Setup
-            </h2>
 
-            <div className="mb-6">
-              <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden relative">
+      {stage === "setup" && (
+        <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+          <Card className="max-w-4xl w-full">
+            <CardHeader>
+              <CardTitle className="text-3xl text-center">
+                Camera & Audio Setup
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="aspect-video bg-muted rounded-lg overflow-hidden relative">
                 <video
                   ref={videoRef}
                   autoPlay
@@ -320,8 +328,8 @@ const BehavioralInterview: React.FC = () => {
                   className="w-full h-full object-cover"
                 />
                 {!permissionGranted && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-90">
-                    <div className="text-center text-white">
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <div className="text-center text-muted-foreground">
                       <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
                       <p className="text-lg">Camera preview will appear here</p>
                     </div>
@@ -329,7 +337,7 @@ const BehavioralInterview: React.FC = () => {
                 )}
               </div>
 
-              <div className="mt-4 h-20 bg-gray-900 rounded-lg overflow-hidden">
+              <div className="h-20 bg-muted rounded-lg overflow-hidden">
                 <canvas
                   ref={canvasRef}
                   width="800"
@@ -337,172 +345,187 @@ const BehavioralInterview: React.FC = () => {
                   className="w-full h-full"
                 />
               </div>
-            </div>
 
-            <div className="flex gap-4 justify-center">
-              {!permissionGranted ? (
-                <button
-                  onClick={startCamera}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
-                >
-                  <Camera className="w-5 h-5" />
-                  Enable Camera & Microphone
-                </button>
-              ) : (
-                <button
-                  onClick={() => setStage("interview")}
-                  className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
-                >
-                  <CheckCircle className="w-5 h-5" />
-                  Continue to Interview
-                </button>
-              )}
-            </div>
-          </div>
+              <div className="flex gap-4 justify-center">
+                {!permissionGranted ? (
+                  <Button onClick={startCamera} size="lg">
+                    <Camera className="w-5 h-5 mr-2" />
+                    Enable Camera & Microphone
+                  </Button>
+                ) : (
+                  <Button onClick={() => setStage("interview")} size="lg">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Continue to Interview
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
+
       {stage === "interview" && (
-        <div className="min-h-screen min-w-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-6">
+        <div className="min-h-screen p-6 bg-background">
           <div className="max-w-6xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-              <div className="bg-blue-600 text-white p-6">
+            <Card>
+              <CardHeader>
                 <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold">
+                  <CardTitle className="text-2xl">
                     Question {currentQuestion + 1} of {questions.length}
-                  </h2>
-                  <div className="bg-blue-700 px-4 py-2 rounded-lg">
+                  </CardTitle>
+                  <Badge variant="secondary">
                     {recordedAnswers.length} answered
-                  </div>
+                  </Badge>
                 </div>
-              </div>
+              </CardHeader>
 
-              <div className="grid md:grid-cols-2 gap-6 p-6">
-                <div>
-                  <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden mb-4">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      muted
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  <div className="h-24 bg-gray-900 rounded-lg overflow-hidden">
-                    <canvas
-                      ref={canvasRef}
-                      width="800"
-                      height="96"
-                      className="w-full h-full"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col">
-                  <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-6 mb-4 flex-grow">
-                    <h3 className="text-sm font-semibold text-gray-500 mb-2">
-                      YOUR QUESTION
-                    </h3>
-                    <p className="text-xl text-gray-900 leading-relaxed">
-                      {questions[currentQuestion]}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    {!isRecording ? (
-                      <button
-                        onClick={startRecording}
-                        disabled={isSubmitting}
-                        className="w-full bg-red-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        <Mic className="w-5 h-5" />
-                        Start Recording Answer
-                      </button>
-                    ) : (
-                      <button
-                        onClick={stopRecording}
-                        className="w-full bg-gray-800 text-white px-6 py-4 rounded-lg font-semibold hover:bg-gray-900 transition-colors flex items-center justify-center gap-2 animate-pulse"
-                      >
-                        <Square className="w-5 h-5" />
-                        Stop Recording
-                      </button>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={submitAnswer}
-                        disabled={recordedChunks.length === 0 || isSubmitting}
-                        className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isSubmitting ? (
-                          <>Processing...</>
-                        ) : (
-                          <>
-                            <Send className="w-5 h-5" />
-                            Submit Answer
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={skipQuestion}
-                        disabled={isSubmitting}
-                        className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-colors disabled:opacity-50"
-                      >
-                        Skip Question
-                      </button>
+              <CardContent className="p-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        muted
+                        className="w-full h-full object-cover"
+                      />
                     </div>
 
-                    {recordedChunks.length > 0 && !isRecording && (
-                      <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-lg">
-                        <CheckCircle className="w-5 h-5" />
-                        <span className="font-medium">
-                          Answer recorded! Ready to submit.
-                        </span>
+                    <div className="h-24 bg-muted rounded-lg overflow-hidden">
+                      <canvas
+                        ref={canvasRef}
+                        width="800"
+                        height="96"
+                        className="w-full h-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <Card className="mb-4 flex-grow">
+                      <CardHeader>
+                        <CardDescription className="text-xs font-semibold uppercase">
+                          Your Question
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-xl leading-relaxed">
+                          {questions[currentQuestion]}
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <div className="space-y-3">
+                      {!isRecording ? (
+                        <Button
+                          onClick={startRecording}
+                          disabled={isSubmitting}
+                          variant="destructive"
+                          className="w-full"
+                          size="lg"
+                        >
+                          <Mic className="w-5 h-5 mr-2" />
+                          Start Recording Answer
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={stopRecording}
+                          variant="secondary"
+                          className="w-full animate-pulse"
+                          size="lg"
+                        >
+                          <Square className="w-5 h-5 mr-2" />
+                          Stop Recording
+                        </Button>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          onClick={submitAnswer}
+                          disabled={recordedChunks.length === 0 || isSubmitting}
+                          size="lg"
+                        >
+                          {isSubmitting ? (
+                            "Processing..."
+                          ) : (
+                            <>
+                              <Send className="w-5 h-5 mr-2" />
+                              Submit Answer
+                            </>
+                          )}
+                        </Button>
+
+                        <Button
+                          onClick={skipQuestion}
+                          disabled={isSubmitting}
+                          variant="outline"
+                          size="lg"
+                        >
+                          Skip Question
+                        </Button>
                       </div>
-                    )}
+
+                      {recordedChunks.length > 0 && !isRecording && (
+                        <Alert>
+                          <CheckCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            Answer recorded! Ready to submit.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}
+
       {stage === "complete" && (
-        <div className="min-h-screen min-w-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-6">
-          <div className="max-w-3xl w-full bg-white rounded-2xl shadow-2xl p-8">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="w-10 h-10 text-green-600" />
+        <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+          <Card className="max-w-3xl w-full">
+            <CardHeader className="text-center space-y-4">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle className="w-10 h-10 text-primary" />
               </div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Interview Complete!
-              </h1>
-              <p className="text-lg text-gray-600 mb-8">
-                Thank you for completing the behavioral interview. Your responses
-                have been recorded and analyzed.
-              </p>
+              <CardTitle className="text-4xl">Interview Complete!</CardTitle>
+              <CardDescription className="text-lg">
+                Thank you for completing the behavioral interview. Your
+                responses have been recorded and analyzed.
+              </CardDescription>
+            </CardHeader>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-                <h3 className="font-semibold text-gray-900 mb-4">
-                  Interview Summary
-                </h3>
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div>
-                    <div className="text-3xl font-bold text-blue-600">
-                      {recordedAnswers.length}
+            <CardContent className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-center">
+                    Interview Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <div className="text-3xl font-bold text-primary">
+                        {recordedAnswers.length}
+                      </div>
+                      <div className="text-muted-foreground">
+                        Questions Answered
+                      </div>
                     </div>
-                    <div className="text-gray-600">Questions Answered</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-blue-600">
-                      {questions.length}
+                    <div>
+                      <div className="text-3xl font-bold text-primary">
+                        {questions.length}
+                      </div>
+                      <div className="text-muted-foreground">
+                        Total Questions
+                      </div>
                     </div>
-                    <div className="text-gray-600">Total Questions</div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
-              <button
+              <Button
                 onClick={() => {
                   setStage("welcome");
                   setCurrentQuestion(0);
@@ -514,12 +537,13 @@ const BehavioralInterview: React.FC = () => {
                   }
                   setPermissionGranted(false);
                 }}
-                className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors"
+                className="w-full"
+                size="lg"
               >
                 Start New Interview
-              </button>
-            </div>
-          </div>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
     </>

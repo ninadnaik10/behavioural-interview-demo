@@ -9,15 +9,25 @@ import {
   CheckCircle,
   TrendingUp,
   FileText,
-  Calendar,
 } from "lucide-react";
+import { Button } from "../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { Separator } from "../components/ui/separator";
 
 // Type definitions
 interface InterviewResponse {
   avg_prediction: number;
   numofwords: number;
   speech_rate_wpm: number;
-  issues: Array<{ message: string } | string>;
+  feedback: string;
   transcript: string;
   question: string;
 }
@@ -25,7 +35,6 @@ interface InterviewResponse {
 interface InterviewData {
   _id: string;
   name: string;
-  date: string;
   responses: InterviewResponse[];
 }
 
@@ -37,7 +46,8 @@ type ViewMode = "list" | "detail";
 
 const InterviewerDashboard: React.FC = () => {
   const [interviews, setInterviews] = useState<InterviewData[]>([]);
-  const [selectedInterview, setSelectedInterview] = useState<InterviewData | null>(null);
+  const [selectedInterview, setSelectedInterview] =
+    useState<InterviewData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [view, setView] = useState<ViewMode>("list");
 
@@ -59,18 +69,20 @@ const InterviewerDashboard: React.FC = () => {
     }
   };
 
-  const getScoreColor = (score: number): string => {
-    if (score >= 4) return "text-green-600 bg-green-100";
-    if (score >= 3) return "text-blue-600 bg-blue-100";
-    if (score >= 2) return "text-yellow-600 bg-yellow-100";
-    return "text-red-600 bg-red-100";
+  const getScoreBadgeVariant = (
+    score: number
+  ): "default" | "secondary" | "destructive" | "outline" => {
+    if (score >= 4) return "default";
+    if (score >= 3) return "secondary";
+    if (score >= 2) return "outline";
+    return "destructive";
   };
 
   const getScoreLabel = (score: number): string => {
-    if (score >= 4) return "Excellent";
-    if (score >= 3) return "Good";
-    if (score >= 2) return "Fair";
-    return "Needs Improvement";
+    if (score >= 4) return "Very Confident";
+    if (score >= 3) return "Confident";
+    if (score >= 2) return "Somewhat Confident";
+    return "Not Confident";
   };
 
   const calculateOverallScore = (responses: InterviewResponse[]): string => {
@@ -79,44 +91,37 @@ const InterviewerDashboard: React.FC = () => {
     return (sum / responses.length).toFixed(1);
   };
 
-  const formatDate = (dateString: string): string => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const renderInterviewList = (): React.ReactElement => (
-    <div className="min-h-screen min-w-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-6">
+    <div className="min-h-screen p-6 bg-background">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Interview Dashboard
-          </h1>
-          <p className="text-blue-200">
+          <h1 className="text-4xl font-bold mb-2">Interview Dashboard</h1>
+          <p className="text-muted-foreground">
             Review and analyze candidate responses
           </p>
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-2xl shadow-2xl p-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading interviews...</p>
-          </div>
+          <Card className="p-12 text-center">
+            <CardContent>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">
+                Loading interviews...
+              </p>
+            </CardContent>
+          </Card>
         ) : interviews.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-2xl p-12 text-center">
-            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No Interviews Found
-            </h3>
-            <p className="text-gray-600">
-              There are no completed interviews to review yet.
-            </p>
-          </div>
+          <Card className="p-12 text-center">
+            <CardContent>
+              <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">
+                No Interviews Found
+              </h3>
+              <p className="text-muted-foreground">
+                There are no completed interviews to review yet.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid gap-6">
             {interviews.map((interview: InterviewData) => {
@@ -127,118 +132,128 @@ const InterviewerDashboard: React.FC = () => {
                   (sum, r) => sum + (r.numofwords || 0),
                   0
                 ) || 0;
-              const totalIssues =
-                interview.responses?.reduce(
-                  (sum, r) => sum + (r.issues?.length || 0),
-                  0
-                ) || 0;
+              const hasFeedback = interview.responses?.some(
+                (r) => r.feedback && r.feedback.trim().length > 0
+              );
 
               return (
-                <div
+                <Card
                   key={interview._id}
                   onClick={() => {
                     setSelectedInterview(interview);
                     setView("detail");
                   }}
-                  className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all cursor-pointer overflow-hidden group"
+                  className="cursor-pointer hover:shadow-lg transition-all group"
                 >
-                  <div className="p-6">
+                  <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-2xl font-bold text-blue-600">
+                        <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+                          <span className="text-2xl font-bold text-primary">
                             {interview.name?.charAt(0).toUpperCase() || "U"}
                           </span>
                         </div>
                         <div>
-                          <h3 className="text-2xl font-bold text-gray-900">
+                          <h3 className="text-2xl font-bold">
                             {interview.name || "Unknown Candidate"}
                           </h3>
-                          <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
+                          {/* <div className="flex items-center gap-2 text-muted-foreground text-sm mt-1">
                             <Calendar className="w-4 h-4" />
                             <span>{formatDate(interview.date)}</span>
-                          </div>
+                          </div> */}
                         </div>
                       </div>
-                      <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                      <ChevronRight className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
 
                     <div className="grid grid-cols-4 gap-4 mb-4">
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-gray-600 text-sm mb-1">
-                          <TrendingUp className="w-4 h-4" />
-                          <span>Overall Score</span>
-                        </div>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-bold text-gray-900">
-                            {overallScore}
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+                            <TrendingUp className="w-4 h-4" />
+                            <span>Overall Confidence Score</span>
+                          </div>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-3xl font-bold">
+                              {overallScore}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              / 5.0
+                            </span>
+                          </div>
+                          <Badge
+                            variant={getScoreBadgeVariant(
+                              parseFloat(overallScore)
+                            )}
+                            className="mt-2"
+                          >
+                            {getScoreLabel(parseFloat(overallScore))}
+                          </Badge>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+                            <MessageSquare className="w-4 h-4" />
+                            <span>Questions</span>
+                          </div>
+                          <div className="text-3xl font-bold">
+                            {totalQuestions}
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            answered
                           </span>
-                          <span className="text-sm text-gray-500">/ 5.0</span>
-                        </div>
-                        <span
-                          className={`inline-block px-2 py-1 rounded text-xs font-medium mt-2 ${getScoreColor(
-                            parseFloat(overallScore)
-                          )}`}
-                        >
-                          {getScoreLabel(parseFloat(overallScore))}
-                        </span>
-                      </div>
+                        </CardContent>
+                      </Card>
 
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-gray-600 text-sm mb-1">
-                          <MessageSquare className="w-4 h-4" />
-                          <span>Questions</span>
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                          {totalQuestions}
-                        </div>
-                        <span className="text-sm text-gray-500">answered</span>
-                      </div>
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+                            <FileText className="w-4 h-4" />
+                            <span>Total Words</span>
+                          </div>
+                          <div className="text-3xl font-bold">{totalWords}</div>
+                          <span className="text-sm text-muted-foreground">
+                            spoken
+                          </span>
+                        </CardContent>
+                      </Card>
 
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-gray-600 text-sm mb-1">
-                          <FileText className="w-4 h-4" />
-                          <span>Total Words</span>
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                          {totalWords}
-                        </div>
-                        <span className="text-sm text-gray-500">spoken</span>
-                      </div>
-
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-gray-600 text-sm mb-1">
-                          <AlertCircle className="w-4 h-4" />
-                          <span>Issues</span>
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                          {totalIssues}
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          identified
-                        </span>
-                      </div>
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+                            <MessageSquare className="w-4 h-4" />
+                            <span>AI Feedback</span>
+                          </div>
+                          <div className="text-3xl font-bold">
+                            {hasFeedback ? "✓" : "—"}
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {hasFeedback ? "available" : "pending"}
+                          </span>
+                        </CardContent>
+                      </Card>
                     </div>
 
                     <div className="flex gap-2">
                       {interview.responses?.slice(0, 3).map((response, idx) => (
                         <div
                           key={idx}
-                          className={`flex-1 h-2 rounded-full ${getScoreColor(
-                            response.avg_prediction
-                          )
-                            .replace("text-", "bg-")
-                            .replace("bg-bg-", "bg-")}`}
+                          className="flex-1 h-2 rounded-full bg-primary"
+                          style={{
+                            opacity: response.avg_prediction / 5,
+                          }}
                         />
                       ))}
                       {interview.responses?.length > 3 && (
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-muted-foreground">
                           +{interview.responses.length - 3}
                         </span>
                       )}
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
@@ -271,189 +286,202 @@ const InterviewerDashboard: React.FC = () => {
         : 0;
 
     return (
-      <div className="min-h-screen min-w-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-6">
+      <div className="min-h-screen p-6 bg-background">
         <div className="max-w-7xl mx-auto">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => setView("list")}
-            className="text-white hover:text-blue-200 mb-6 flex items-center gap-2 transition-colors"
+            className="mb-6"
           >
-            <ChevronRight className="w-5 h-5 rotate-180" />
+            <ChevronRight className="w-5 h-5 rotate-180 mr-2" />
             Back to Interviews
-          </button>
+          </Button>
 
-          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-6">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-8">
+          <Card className="mb-6">
+            <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                  <div className="w-20 h-20 bg-background/20 rounded-full flex items-center justify-center">
                     <span className="text-4xl font-bold">
                       {selectedInterview.name?.charAt(0).toUpperCase() || "U"}
                     </span>
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold mb-2">
+                    <CardTitle className="text-3xl mb-2">
                       {selectedInterview.name || "Unknown Candidate"}
-                    </h1>
-                    <div className="flex items-center gap-2 text-blue-100">
+                    </CardTitle>
+                    {/* <div className="flex items-center gap-2 opacity-90">
                       <Calendar className="w-4 h-4" />
                       <span>{formatDate(selectedInterview.date)}</span>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-blue-100 text-sm mb-1">
-                    Overall Score
+                  <div className="opacity-90 text-sm mb-1">
+                    Overall Confidence Score
                   </div>
                   <div className="text-5xl font-bold">{overallScore}</div>
-                  <div className="text-blue-100 text-sm">out of 5.0</div>
+                  <div className="opacity-90 text-sm">out of 5.0</div>
                 </div>
               </div>
-            </div>
+            </CardHeader>
 
-            <div className="grid md:grid-cols-3 gap-6 p-8 bg-gray-50">
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <MessageSquare className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <span className="text-gray-600 font-medium">
-                    Avg Words/Response
-                  </span>
-                </div>
-                <div className="text-3xl font-bold text-gray-900">
-                  {avgWordsPerResponse}
-                </div>
-              </div>
+            <CardContent className="p-8">
+              <div className="grid md:grid-cols-3 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <MessageSquare className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="font-medium">Avg Words/Response</span>
+                    </div>
+                    <div className="text-3xl font-bold">
+                      {avgWordsPerResponse}
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-green-600" />
-                  </div>
-                  <span className="text-gray-600 font-medium">
-                    Avg Speech Rate
-                  </span>
-                </div>
-                <div className="text-3xl font-bold text-gray-900">
-                  {avgSpeechRate}
-                </div>
-                <div className="text-sm text-gray-500">words per minute</div>
-              </div>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="font-medium">Avg Speech Rate</span>
+                    </div>
+                    <div className="text-3xl font-bold">{avgSpeechRate}</div>
+                    <div className="text-sm text-muted-foreground">
+                      words per minute
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <span className="text-gray-600 font-medium">
-                    Total Responses
-                  </span>
-                </div>
-                <div className="text-3xl font-bold text-gray-900">
-                  {selectedInterview.responses?.length || 0}
-                </div>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <BarChart3 className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="font-medium">Total Responses</span>
+                    </div>
+                    <div className="text-3xl font-bold">
+                      {selectedInterview.responses?.length || 0}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           <div className="space-y-6">
             {selectedInterview.responses?.map((response, idx) => (
-              <div
-                key={idx}
-                className="bg-white rounded-2xl shadow-xl overflow-hidden"
-              >
-                <div className="bg-gray-50 border-b border-gray-200 p-6">
+              <Card key={idx}>
+                <CardHeader className="border-b">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                          Question {idx + 1}
-                        </span>
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${getScoreColor(
+                        <Badge>Question {idx + 1}</Badge>
+                        <Badge
+                          variant={getScoreBadgeVariant(
                             response.avg_prediction
-                          )}`}
+                          )}
                         >
-                          Score: {response.avg_prediction?.toFixed(1) || "N/A"}
-                        </span>
+                          Confidence score:{" "}
+                          {response.avg_prediction?.toFixed(1) || "N/A"}
+                        </Badge>
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-900">
+                      <CardTitle className="text-xl">
                         {response.question}
-                      </h3>
+                      </CardTitle>
                     </div>
                   </div>
-                </div>
+                </CardHeader>
 
-                <div className="p-6">
+                <CardContent className="p-6">
                   <div className="mb-6">
-                    <h4 className="text-sm font-semibold text-gray-500 uppercase mb-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-2">
                       Transcript
                     </h4>
-                    <p className="text-lg text-gray-900 leading-relaxed">
+                    <p className="text-lg leading-relaxed">
                       {response.transcript || "No transcript available"}
                     </p>
                   </div>
 
                   <div className="grid md:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <div className="text-sm text-gray-600 mb-1">
-                        Word Count
-                      </div>
-                      <div className="text-2xl font-bold text-gray-900">
-                        {response.numofwords || 0}
-                      </div>
-                    </div>
-                    <div className="bg-green-50 rounded-lg p-4">
-                      <div className="text-sm text-gray-600 mb-1">
-                        Speech Rate
-                      </div>
-                      <div className="text-2xl font-bold text-gray-900">
-                        {response.speech_rate_wpm?.toFixed(1) || 0}
-                      </div>
-                      <div className="text-xs text-gray-500">WPM</div>
-                    </div>
-                    <div className="bg-purple-50 rounded-lg p-4">
-                      <div className="text-sm text-gray-600 mb-1">
-                        Issues Found
-                      </div>
-                      <div className="text-2xl font-bold text-gray-900">
-                        {response.issues?.length || 0}
-                      </div>
-                    </div>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground mb-1">
+                          Word Count
+                        </div>
+                        <div className="text-2xl font-bold">
+                          {response.numofwords || 0}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground mb-1">
+                          Speech Rate
+                        </div>
+                        <div className="text-2xl font-bold">
+                          {response.speech_rate_wpm?.toFixed(1) || 0}
+                        </div>
+                        <div className="text-xs text-muted-foreground">WPM</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground mb-1">
+                          AI Feedback
+                        </div>
+                        <div className="text-2xl font-bold">
+                          {response.feedback && response.feedback.trim()
+                            ? "✓"
+                            : "—"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {response.feedback && response.feedback.trim()
+                            ? "Available"
+                            : "Pending"}
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
 
-                  {response.issues && response.issues.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                        <h4 className="font-semibold text-gray-900">
-                          Issues Identified
-                        </h4>
-                      </div>
-                      <ul className="space-y-2">
-                        {response.issues.map((issue, issueIdx) => (
-                          <li
-                            key={issueIdx}
-                            className="flex items-start gap-2 text-gray-700"
-                          >
-                            <span className="text-amber-600 mt-1">•</span>
-                            <span>{typeof issue === 'string' ? issue : issue.message}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  {response.feedback && response.feedback.trim().length > 0 ? (
+                    <Alert>
+                      <MessageSquare className="h-4 w-4" />
+                      <AlertTitle>AI Feedback</AlertTitle>
+                      <AlertDescription>
+                        <div className="mt-2 space-y-2">
+                          {response.feedback
+                            .split("\n")
+                            .filter((line) => line.trim())
+                            .map((line, lineIdx) => (
+                              <div
+                                key={lineIdx}
+                                className="flex items-start gap-2"
+                              >
+                                <span className="mt-1">•</span>
+                                <span className="flex-1">
+                                  {line.replace(/^\*\s*/, "").trim()}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert>
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        No feedback available yet.
+                      </AlertDescription>
+                    </Alert>
                   )}
-
-                  {(!response.issues || response.issues.length === 0) && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="text-green-800 font-medium">
-                        No issues identified - Great response!
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
