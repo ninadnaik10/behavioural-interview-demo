@@ -6,8 +6,8 @@ from .services import MLService, TranscriptionService, GrammarService, DatabaseS
 from moviepy.editor import VideoFileClip
 import tempfile
 import os
-
-
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 @api_blueprint.route('/predict', methods=['POST'])
 def predict():
@@ -15,39 +15,51 @@ def predict():
         return jsonify({"error": "No file provided"}), 400
 
     uploaded_file = request.files['audio']
-    # interview_id = request.form['interview_id']
-    # name = request.form['name']
-    # question = request.form['question']
     filename = uploaded_file.filename.lower()
 
     if not (filename.endswith('.wav') or filename.endswith('.webm')):
         return jsonify({"error": "Unsupported file type. Only .wav or .webm allowed"}), 400
 
+    return asyncio.run(predict_async(uploaded_file, filename))
+
+
+async def predict_async(uploaded_file, filename):
     temp_audio_path = None
+    executor = ThreadPoolExecutor()
+    
     try:
         if filename.endswith('.webm'):
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_video:
-                uploaded_file.save(temp_video.name)
-                temp_video.flush()
-
-                with VideoFileClip(temp_video.name) as video:
-                    temp_audio_path = tempfile.NamedTemporaryFile(delete=False, suffix='.wav').name
-                    video.audio.write_audiofile(temp_audio_path, codec='pcm_s16le')
-                
-                audio_file_path = temp_audio_path
+            audio_file_path = await asyncio.get_event_loop().run_in_executor(
+                executor, process_webm, uploaded_file
+            )
+            temp_audio_path = audio_file_path
         else:
             with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_audio:
                 uploaded_file.save(temp_audio.name)
                 audio_file_path = temp_audio.name
 
         with open(audio_file_path, 'rb') as audio_file:
-            prediction_sequence, avg_prediction = current_app.ml_service.predict_from_audio_file(audio_file)
-            audio_file.seek(0)
-            transcript, num_of_words, duration, speech_rate_wpm = current_app.transcription_service.transcribe_and_analyze(audio_file)
-
-        issues = current_app.grammar_service.check_grammar(transcript) 
+            audio_content = audio_file.read()
+        
+        tasks = [
+            asyncio.get_event_loop().run_in_executor(
+                executor, run_ml_prediction, audio_content, current_app.ml_service
+            ),
+            asyncio.get_event_loop().run_in_executor(
+                executor, run_transcription, audio_content, current_app.transcription_service
+            )
+        ]
+        
+        results = await asyncio.gather(*tasks)
+        prediction_sequence, avg_prediction = results[0]
+        transcript, num_of_words, duration, speech_rate_wpm = results[1]
+        
+        issues = await asyncio.get_event_loop().run_in_executor(
+            executor, current_app.grammar_service.check_grammar, transcript
+        )
+        
         metadata = {
-           **request.form,
+            **request.form,
             "prediction": prediction_sequence,
             "avg_prediction": avg_prediction,
             "transcript": transcript,
@@ -55,10 +67,12 @@ def predict():
             "speech_rate_wpm": speech_rate_wpm,
             "issues": issues
         }
-        current_app.db_service.upload_results(metadata)
-        return jsonify({
-            "message": "OK",
-        }), 200
+        
+        await asyncio.get_event_loop().run_in_executor(
+            executor, current_app.db_service.upload_results, metadata
+        )
+        
+        return jsonify({"message": "OK"}), 200
 
     except Exception as e:
         current_app.logger.error(f"Prediction error: {e}")
@@ -67,6 +81,31 @@ def predict():
     finally:
         if temp_audio_path and os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
+        executor.shutdown(wait=False)
+
+
+def process_webm(uploaded_file):
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_video:
+        uploaded_file.save(temp_video.name)
+        temp_video.flush()
+
+        with VideoFileClip(temp_video.name) as video:
+            temp_audio_path = tempfile.NamedTemporaryFile(delete=False, suffix='.wav').name
+            video.audio.write_audiofile(temp_audio_path, codec='pcm_s16le')
+        
+        return temp_audio_path
+
+
+def run_ml_prediction(audio_content, ml_service):
+    import io
+    audio_file = io.BytesIO(audio_content)
+    return ml_service.predict_from_audio_file(audio_file)
+
+
+def run_transcription(audio_content, transcription_service):
+    import io
+    audio_file = io.BytesIO(audio_content)
+    return transcription_service.transcribe_and_analyze(audio_file)
 
 # @api_blueprint.route('/predict', methods=['POST'])
 # def predict():
