@@ -10,7 +10,6 @@ const Structure: React.FC = () => {
       <div className="w-screen flex flex-row justify-center">
         <Routes>
           <Route path="/" element={<HomePage />} />
-
           <Route path="/interview" element={<InterviewPage />} />
           <Route path="/interview-result" element={<InterviewResultPage />} />
         </Routes>

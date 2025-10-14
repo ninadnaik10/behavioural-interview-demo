@@ -44,9 +44,8 @@ const BehavioralInterview: React.FC = () => {
 
   // Sample behavioral questions
   const questions: string[] = [
-    "Describe a situation where you had to work with a difficult team member. What was your approach?",
-    "Give an example of a goal you set and how you achieved it.",
     "Describe a situation where you showed leadership skills.",
+    "Give an example of a goal you set and how you achieved it.",
   ];
 
   useEffect(() => {

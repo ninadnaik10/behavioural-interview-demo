@@ -32,6 +32,30 @@ interface InterviewResponse {
   question: string;
 }
 
+// Common filler words to highlight
+const FILLER_WORDS = [
+  "um",
+  "uh",
+  "umm",
+  "uhh",
+  "er",
+  "ah",
+  "like",
+  "you know",
+  "i mean",
+  "sort of",
+  "kind of",
+  "basically",
+  "actually",
+  "literally",
+  "so",
+  "well",
+  "hmm",
+  "okay",
+  "right",
+  "yeah",
+];
+
 interface InterviewData {
   _id: string;
   name: string;
@@ -89,6 +113,52 @@ const InterviewerDashboard: React.FC = () => {
     if (!responses || responses.length === 0) return "0";
     const sum = responses.reduce((acc, r) => acc + (r.avg_prediction || 0), 0);
     return (sum / responses.length).toFixed(1);
+  };
+
+  const highlightFillerWords = (text: string): React.ReactElement => {
+    if (!text) return <span>No transcript available</span>;
+
+    // Create a regex pattern that matches filler words with word boundaries
+    const pattern = new RegExp(`\\b(${FILLER_WORDS.join("|")})\\b`, "gi");
+
+    const parts: React.ReactElement[] = [];
+    let lastIndex = 0;
+    let match;
+
+    // Find all matches and split the text
+    const regex = new RegExp(pattern);
+    while ((match = regex.exec(text)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(
+          <span key={`text-${lastIndex}`}>
+            {text.substring(lastIndex, match.index)}
+          </span>
+        );
+      }
+
+      // Add the highlighted filler word
+      parts.push(
+        <span
+          key={`filler-${match.index}`}
+          className="bg-yellow-200 dark:bg-red-400 text-yellow-900 dark:text-white px-1 rounded"
+          title="Filler word"
+        >
+          {match[0]}
+        </span>
+      );
+
+      lastIndex = regex.lastIndex;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(
+        <span key={`text-${lastIndex}`}>{text.substring(lastIndex)}</span>
+      );
+    }
+
+    return <>{parts}</>;
   };
 
   const renderInterviewList = (): React.ReactElement => (
@@ -404,7 +474,7 @@ const InterviewerDashboard: React.FC = () => {
                       Transcript
                     </h4>
                     <p className="text-lg leading-relaxed">
-                      {response.transcript || "No transcript available"}
+                      {highlightFillerWords(response.transcript)}
                     </p>
                   </div>
 
