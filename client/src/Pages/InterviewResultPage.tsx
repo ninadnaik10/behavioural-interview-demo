@@ -93,13 +93,11 @@ const InterviewerDashboard: React.FC = () => {
     }
   };
 
-  const getScoreBadgeVariant = (
-    score: number
-  ): "default" | "secondary" | "destructive" | "outline" => {
-    if (score >= 4) return "default";
-    if (score >= 3) return "secondary";
-    if (score >= 2) return "outline";
-    return "destructive";
+  const getScoreColor = (score: number): { bg: string; text: string } => {
+    if (score >= 4) return { bg: "bg-green-500", text: "text-white" };
+    if (score >= 3) return { bg: "bg-blue-500", text: "text-white" };
+    if (score >= 2) return { bg: "bg-red-400", text: "text-white" }; // Light red for somewhat confident
+    return { bg: "bg-red-700", text: "text-white" }; // Dark red for not confident
   };
 
   const getScoreLabel = (score: number): string => {
@@ -113,6 +111,14 @@ const InterviewerDashboard: React.FC = () => {
     if (!responses || responses.length === 0) return "0";
     const sum = responses.reduce((acc, r) => acc + (r.avg_prediction || 0), 0);
     return (sum / responses.length).toFixed(1);
+  };
+
+  const countFillerWords = (text: string): number => {
+    if (!text) return 0;
+
+    const pattern = new RegExp(`\\b(${FILLER_WORDS.join("|")})\\b`, "gi");
+    const matches = text.match(pattern);
+    return matches ? matches.length : 0;
   };
 
   const highlightFillerWords = (text: string): React.ReactElement => {
@@ -252,10 +258,9 @@ const InterviewerDashboard: React.FC = () => {
                             </span>
                           </div>
                           <Badge
-                            variant={getScoreBadgeVariant(
-                              parseFloat(overallScore)
-                            )}
-                            className="mt-2"
+                            className={`mt-2 ${
+                              getScoreColor(parseFloat(overallScore)).bg
+                            } ${getScoreColor(parseFloat(overallScore)).text}`}
                           >
                             {getScoreLabel(parseFloat(overallScore))}
                           </Badge>
@@ -336,11 +341,11 @@ const InterviewerDashboard: React.FC = () => {
     if (!selectedInterview) return null;
 
     const overallScore = calculateOverallScore(selectedInterview.responses);
-    const avgWordsPerResponse =
+    const avgFillerWordsPerResponse =
       selectedInterview.responses?.length > 0
         ? Math.round(
             selectedInterview.responses.reduce(
-              (sum, r) => sum + (r.numofwords || 0),
+              (sum, r) => sum + countFillerWords(r.transcript || ""),
               0
             ) / selectedInterview.responses.length
           )
@@ -404,10 +409,12 @@ const InterviewerDashboard: React.FC = () => {
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                         <MessageSquare className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-medium">Avg Words/Response</span>
+                      <span className="font-medium">
+                        Avg Filler Words/Response
+                      </span>
                     </div>
                     <div className="text-3xl font-bold">
-                      {avgWordsPerResponse}
+                      {avgFillerWordsPerResponse}
                     </div>
                   </CardContent>
                 </Card>
@@ -452,14 +459,14 @@ const InterviewerDashboard: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <Badge>Question {idx + 1}</Badge>
-                        <Badge
+                        {/* <Badge
                           variant={getScoreBadgeVariant(
                             response.avg_prediction
                           )}
-                        >
-                          Confidence score:{" "}
-                          {response.avg_prediction?.toFixed(1) || "N/A"}
-                        </Badge>
+                        > */}
+                        {/* Confidence score:{" "}
+                          {response.avg_prediction?.toFixed(1) || "N/A"} */}
+                        {/* </Badge> */}
                       </div>
                       <CardTitle className="text-xl">
                         {response.question}
@@ -478,15 +485,22 @@ const InterviewerDashboard: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="grid md:grid-cols-3 gap-4 mb-6">
+                  <div className="grid md:grid-cols-4 gap-4 mb-6">
                     <Card>
                       <CardContent className="p-4">
                         <div className="text-sm text-muted-foreground mb-1">
-                          Word Count
+                          Confidence Score
                         </div>
                         <div className="text-2xl font-bold">
-                          {response.numofwords || 0}
+                          {response.avg_prediction?.toFixed(1) || "0.0"}
                         </div>
+                        <Badge
+                          className={`mt-2 ${
+                            getScoreColor(response.avg_prediction).bg
+                          } ${getScoreColor(response.avg_prediction).text}`}
+                        >
+                          {getScoreLabel(response.avg_prediction)}
+                        </Badge>
                       </CardContent>
                     </Card>
                     <Card>
@@ -503,17 +517,26 @@ const InterviewerDashboard: React.FC = () => {
                     <Card>
                       <CardContent className="p-4">
                         <div className="text-sm text-muted-foreground mb-1">
-                          AI Feedback
+                          Words Spoken
                         </div>
                         <div className="text-2xl font-bold">
-                          {response.feedback && response.feedback.trim()
-                            ? "✓"
-                            : "—"}
+                          {response.numofwords || 0}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {response.feedback && response.feedback.trim()
-                            ? "Available"
-                            : "Pending"}
+                          words
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground mb-1">
+                          Filler Words
+                        </div>
+                        <div className="text-2xl font-bold">
+                          {countFillerWords(response.transcript || "")}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          detected
                         </div>
                       </CardContent>
                     </Card>
