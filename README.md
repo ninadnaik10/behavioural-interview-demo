@@ -2,7 +2,7 @@
 
 An intelligent interview platform that leverages machine learning to analyze candidate responses in real-time, helping hiring managers make data-driven decisions during the recruitment process.
 
-🎥 Demo Video: [https://drive.google.com/file/d/1jbbEXCNgbZM7XM029VDN1V6U0EQN8ThX/view?usp=sharing](https://drive.google.com/file/d/1jbbEXCNgbZM7XM029VDN1V6U0EQN8ThX/view?usp=sharing)
+🎥 Demo Video: [https://drive.google.com/file/d/18E1ror1CspPB6zm4FAsQG4tsEK4KJR_5/view?usp=drive_link](https://drive.google.com/file/d/18E1ror1CspPB6zm4FAsQG4tsEK4KJR_5/view?usp=drive_link)
 
 ## 📋 About The Project
 
